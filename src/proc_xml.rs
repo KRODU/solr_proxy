@@ -54,26 +54,26 @@ pub fn read_xml<'xml>(xml: &'xml [u8]) -> Result<Vec<Doc<'xml>>, BoxedError> {
             Ok(Event::End(e)) => {
                 // doc의 파싱이 끝난 경우 ret_docs에 추가하여 넣음
                 if e.name().0 == b"doc" {
-                    if let Some(doc_start_position) = doc_start_position {
-                        let ori_str = &xml[doc_start_position..reader.buffer_position()];
-
-                        // ori_str의 유효성 체크
-                        // <doc> 태그로 시작하고 </doc> 태그로 끝나야 함.
-                        if ori_str.starts_with(b"<doc") && ori_str.ends_with(b"</doc>") {
-                            let doc = Doc::new(field, ori_str);
-                            ret_docs.push(doc);
-                            field = DocField::new();
-                        } else {
-                            return Err(Box::new(StrError::new(
-                                "ORI_STR_VALIDATION_FAIL".to_string(),
-                            )));
-                        }
-                    } else {
+                    let Some(doc_start_position_value) = doc_start_position else {
                         // 이 위치에서 doc_start_position이 None이면 안됨. 에러 반환
                         return Err(Box::new(StrError::new(
                             "DOC_START_POSITION_EMPTY".to_string(),
                         )));
+                    };
+
+                    let ori_str = &xml[doc_start_position_value..reader.buffer_position()];
+
+                    // ori_str의 유효성 체크
+                    // <doc> 태그로 시작하고 </doc> 태그로 끝나야 함.
+                    if !ori_str.starts_with(b"<doc") || !ori_str.ends_with(b"</doc>") {
+                        return Err(Box::new(StrError::new(
+                            "ORI_STR_VALIDATION_FAIL".to_string(),
+                        )));
                     }
+
+                    let doc = Doc::new(field, ori_str);
+                    ret_docs.push(doc);
+                    field = DocField::new();
                     doc_start_position = None;
                 }
                 previous_field_name = None;

@@ -135,9 +135,9 @@ pub async fn proc_xml(docs: &mut Vec<Doc<'_>>) -> Result<(), BoxedError> {
                     }
                     // db에서 찾지 못한 경우 INSERT 후 다시 SELECT
                     let sql = "INSERT IGNORE INTO crawlerdb.t_channel_contents_map
-(seed_id, site_name, media_url, channel_type_cd_1, channel_type_cd_2, content_type_cd_1, content_type_cd_2)
+(seed_id, site_name, media_url, media_type_no)
 VALUES
-(uuid(), '', ?, '', '', '', '');";
+(uuid(), '', ?, '0');";
                     sqlx::query(sql).bind(&seed_host).execute(&*CON).await?;
                     let rows = select_seed_id(&seed_host).await?;
                     let Some(row) = rows else {
@@ -290,7 +290,7 @@ pub fn write_xml(docs: Vec<Doc>) -> Result<WriteOk, BoxedError> {
             writer.write_event(Event::End(BytesEnd::new("doc")))?;
         } else {
             // doc에 변경사항이 없는 경우 기존 doc 데이터를 그대로 다시 write
-            writer.inner().write_all(ori_str)?;
+            writer.get_mut().write_all(ori_str)?;
         }
     }
 
@@ -423,19 +423,19 @@ async fn doc_read_test() {
 
     proc_xml(&mut docs).await.unwrap();
     let result = write_xml(docs).unwrap();
-    if let WriteOk::Changed(final_xml, size) = result {
-        assert!(final_xml.starts_with(b"<add><doc"));
-        assert!(final_xml.ends_with(b"</field></doc></add>"));
-        assert_eq!(size, 2);
-        let final_read = read_xml(&final_xml).unwrap();
-        assert_eq!(final_read.len(), 2);
-        assert_eq!(
-            final_read[0].field().get(COL_SEED_ID).unwrap()[0]
-                .to_unescape_str()
-                .unwrap(),
-            "e7531c15-2384-11ed-b560-42010a025a43"
-        );
-    } else {
+    let WriteOk::Changed(final_xml, size) = result else {
         panic!("result is not WriteOk::Changed");
-    }
+    };
+
+    assert!(final_xml.starts_with(b"<add><doc"));
+    assert!(final_xml.ends_with(b"</field></doc></add>"));
+    assert_eq!(size, 2);
+    let final_read = read_xml(&final_xml).unwrap();
+    assert_eq!(final_read.len(), 2);
+    assert_eq!(
+        final_read[0].field().get(COL_SEED_ID).unwrap()[0]
+            .to_unescape_str()
+            .unwrap(),
+        "e7531c15-2384-11ed-b560-42010a025a43"
+    );
 }

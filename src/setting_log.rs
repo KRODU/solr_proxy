@@ -61,7 +61,7 @@ pub fn setup_logger() -> Result<Handle, Box<dyn Error + Send + Sync>> {
         // panic이 발생한 경우 서버 종료를 요청함
         tokio::spawn(async move {
             let mut server_sender_lock = STOP_SERVER_SENDER.lock().await;
-            let sender_option = std::mem::replace(&mut *server_sender_lock, None);
+            let sender_option = (*server_sender_lock).take();
 
             if let Some(sender) = sender_option {
                 if sender.send(()).is_ok() {

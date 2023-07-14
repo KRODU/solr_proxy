@@ -88,14 +88,14 @@ static CON: SyncLazy<MySqlPool> = SyncLazy::new(|| {
         db_host, db_user, db_pwd, db_schema
     );
 
-    let mut conn = MySqlConnectOptions::new()
+    let conn = MySqlConnectOptions::new()
         .host(&db_host)
         .username(&db_user)
         .password(&db_pwd)
         .database(&db_schema)
-        .statement_cache_capacity(100);
-    conn.log_statements(log::LevelFilter::Debug);
-    conn.log_slow_statements(log::LevelFilter::Info, Duration::from_secs(5));
+        .statement_cache_capacity(100)
+        .log_statements(log::LevelFilter::Debug)
+        .log_slow_statements(log::LevelFilter::Info, Duration::from_secs(5));
 
     PoolOptions::new()
         // 10분동안 미사용시 연결 끊음
